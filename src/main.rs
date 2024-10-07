@@ -62,23 +62,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
 
     commands.spawn((
-        Name::new("Player1"),
-        SpriteBundle {
-            texture: asset_server.load("ducky.png"),
-            ..Default::default()
-        },
-        MovementController {
-            max_speed: 1.,
-            intent: Vec2::ZERO,
-        },
-        RigidBody::Dynamic,
-        Collider::cuboid(16.0, 16.0),
-        ExternalForce::default(),
-        ExternalImpulse::default(),
-        Restitution::coefficient(1.0),
-    ));
-
-    commands.spawn((
         Name::new("Floor"),
         SpriteBundle {
             transform: Transform::from_translation(Vec3::new(0., -300., 0.)),
@@ -88,36 +71,25 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         RigidBody::Fixed,
         Collider::cuboid(800.0, 16.0),
     ));
-    commands.spawn((
-        Name::new("Wall1"),
-        SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(-600., 0., 0.)),
-            texture: asset_server.load("ducky.png"),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Collider::cuboid(16.0, 400.0),
-    ));
-    commands.spawn((
-        Name::new("Wall2"),
-        SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(600., 0., 0.)),
-            texture: asset_server.load("ducky.png"),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Collider::cuboid(16.0, 400.0),
-    ));
-    commands.spawn((
-        Name::new("Wall3"),
-        SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(0., 300., 0.)),
-            texture: asset_server.load("ducky.png"),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Collider::cuboid(800.0, 16.0),
-    ));
+
+    let wall_positions = [
+        Vec3::new(-600., 0., 0.),
+        Vec3::new(600., 0., 0.),
+        Vec3::new(0., 300., 0.),
+    ];
+
+    for position in wall_positions.iter() {
+        commands.spawn((
+            Name::new("Wall"),
+            SpriteBundle {
+                transform: Transform::from_translation(*position),
+                texture: asset_server.load("ducky.png"),
+                ..Default::default()
+            },
+            RigidBody::Fixed,
+            Collider::cuboid(16.0, 400.0),
+        ));
+    }
 
     // Spawn collectible objects
     for i in 0..5 {
@@ -145,20 +117,22 @@ fn move_paddle(
     time: Res<Time>,
 ) {
     for (mut pos, settings) in &mut paddles {
+        let impulse_strength = 1000.0;
+
         if input.pressed(KeyCode::KeyW) {
-            pos.impulse = Vec2::new(0., 100000.);
+            pos.impulse = Vec2::new(0., impulse_strength);
         }
 
         if input.pressed(KeyCode::KeyS) {
-            pos.impulse = Vec2::new(0., -100000.);
+            pos.impulse = Vec2::new(0., -impulse_strength);
         }
 
         if input.pressed(KeyCode::KeyA) {
-            pos.impulse = Vec2::new(-100000., 0.);
+            pos.impulse = Vec2::new(-impulse_strength, 0.);
         }
 
         if input.pressed(KeyCode::KeyD) {
-            pos.impulse = Vec2::new(100000., 0.);
+            pos.impulse = Vec2::new(impulse_strength, 0.);
         }
     }
 }
