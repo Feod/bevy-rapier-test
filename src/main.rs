@@ -143,6 +143,7 @@ fn move_paddle(
 
 fn camera_follow(
     mut camera_query: Query<&mut Transform, With<Camera>>,
+    mut camera_projection_query: Query<&mut OrthographicProjection, With<Camera>>,
     player_query: Query<&Transform, With<MovementController>>,
 ) {
     let mut average_position = Vec3::ZERO;
@@ -157,7 +158,14 @@ fn camera_follow(
         average_position /= count as f32;
     }
 
+    let base_zoom = 1.0;
+    let zoom_level = base_zoom / (count as f32).sqrt();
+
     for mut camera_transform in camera_query.iter_mut() {
         camera_transform.translation = average_position;
+    }
+
+    for mut camera_projection in camera_projection_query.iter_mut() {
+        camera_projection.scale = zoom_level;
     }
 }
