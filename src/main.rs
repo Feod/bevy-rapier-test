@@ -3,6 +3,7 @@
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 
+use bevy::render::camera;
 use bevy::ui::widget::UiImageSize;
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
@@ -25,7 +26,10 @@ fn main() {
     app.add_plugins(RapierDebugRenderPlugin::default());
 
     app.add_systems(Startup, setup);
-    app.add_systems(Update, (move_paddle, camera_follow, collect_items));
+//    app.add_systems(Update, (move_paddle, camera_follow, collect_items));
+    app.add_systems(Update, (move_paddle));
+    //app.add_systems(Update, (camera_follow));
+
 
     app.run();
 }
@@ -69,13 +73,23 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         },
         RigidBody::Fixed,
-        Collider::cuboid(800.0, 16.0),
+        Collider::cuboid(800.0, 32.0),
+    ));
+
+    commands.spawn((
+        Name::new("Floor"),
+        SpriteBundle {
+            transform: Transform::from_translation(Vec3::new(0., 300., 0.)),
+            texture: asset_server.load("ducky.png"),
+            ..Default::default()
+        },
+        RigidBody::Fixed,
+        Collider::cuboid(800.0, 32.0),
     ));
 
     let wall_positions = [
         Vec3::new(-600., 0., 0.),
         Vec3::new(600., 0., 0.),
-        Vec3::new(0., 300., 0.),
     ];
 
     for position in wall_positions.iter() {
@@ -87,7 +101,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..Default::default()
             },
             RigidBody::Fixed,
-            Collider::cuboid(16.0, 400.0),
+            Collider::cuboid(32.0, 400.0),
         ));
     }
 
@@ -117,10 +131,10 @@ fn move_paddle(
     time: Res<Time>,
 ) {
     for (mut pos, settings) in &mut paddles {
-        let impulse_strength = 1000.0;
+        let impulse_strength = 10000.0;
 
         if input.pressed(KeyCode::KeyW) {
-            pos.impulse = Vec2::new(0., impulse_strength);
+            pos.impulse = Vec2::new(0., 100000.);
         }
 
         if input.pressed(KeyCode::KeyS) {
@@ -137,16 +151,18 @@ fn move_paddle(
     }
 }
 
+
+/*
 fn camera_follow(
-    mut camera_query: Query<&mut Transform, With<Camera>>,
-    mut camera_projection_query: Query<&mut OrthographicProjection, With<Camera>>,
-    player_query: Query<&Transform, With<MovementController>>,
+    mut camera_query: Query<(&mut Transform, &Camera)>,
+//    mut camera_projection_query: Query<&mut OrthographicProjection, With<Camera>>,
+    mut player_query: Query<(&mut Transform, &MovementController)>,
 ) {
     let mut average_position = Vec3::ZERO;
     let mut count = 0;
 
-    for transform in player_query.iter() {
-        average_position += transform.translation;
+    for transform in &mut player_query {
+        average_position += transform.0.translation;
         count += 1;
     }
 
@@ -155,17 +171,21 @@ fn camera_follow(
     }
 
     let base_zoom = 1.0;
-    let zoom_level = base_zoom / (count as f32).sqrt();
+    //let zoom_level = base_zoom / (count as f32).sqrt();
 
-    for mut camera_transform in camera_query.iter_mut() {
-        camera_transform.translation = average_position;
+    for mut camera_transform in &mut camera_query {
+        camera_transform.0.translation = average_position;
     }
 
-    for mut camera_projection in camera_projection_query.iter_mut() {
+    
+    for mut camera_projection in &mut camera_projection_query {
         camera_projection.scale = zoom_level;
     }
+    
 }
+*/
 
+/*
 fn collect_items(
     mut commands: Commands,
     mut player_query: Query<(Entity, &Transform), With<MovementController>>,
@@ -182,3 +202,4 @@ fn collect_items(
         }
     }
 }
+    */
