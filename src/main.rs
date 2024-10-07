@@ -25,7 +25,7 @@ fn main() {
     app.add_plugins(RapierDebugRenderPlugin::default());
 
     app.add_systems(Startup, setup);
-    app.add_systems(Update, (move_paddle, camera_follow));
+    app.add_systems(Update, (move_paddle, camera_follow, collect_items));
 
     app.run();
 }
@@ -35,6 +35,9 @@ struct MovementController {
     intent: Vec2,
     max_speed: f32,
 }
+
+#[derive(Component)]
+struct Collectible;
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
@@ -115,6 +118,25 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         RigidBody::Fixed,
         Collider::cuboid(800.0, 16.0),
     ));
+
+    // Spawn collectible objects
+    for i in 0..5 {
+        commands.spawn((
+            Name::new("Collectible"),
+            SpriteBundle {
+                texture: asset_server.load("collectible.png"),
+                transform: Transform::from_translation(Vec3::new(
+                    rand::thread_rng().gen_range(-500.0..500.0),
+                    rand::thread_rng().gen_range(-300.0..300.0),
+                    0.0,
+                )),
+                ..Default::default()
+            },
+            Collectible,
+            RigidBody::Fixed,
+            Collider::cuboid(8.0, 8.0),
+        ));
+    }
 }
 
 fn move_paddle(
@@ -167,5 +189,22 @@ fn camera_follow(
 
     for mut camera_projection in camera_projection_query.iter_mut() {
         camera_projection.scale = zoom_level;
+    }
+}
+
+fn collect_items(
+    mut commands: Commands,
+    mut player_query: Query<(Entity, &Transform), With<MovementController>>,
+    collectible_query: Query<(Entity, &Transform), With<Collectible>>,
+) {
+    for (player_entity, player_transform) in player_query.iter_mut() {
+        for (collectible_entity, collectible_transform) in collectible_query.iter() {
+            let distance = player_transform
+                .translation
+                .distance(collectible_transform.translation);
+            if distance < 16.0 {
+                commands.entity(collectible_entity).despawn();
+            }
+        }
     }
 }
