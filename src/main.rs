@@ -1,7 +1,3 @@
-// Bevy code commonly triggers these lints and they may be important signals
-// about code quality. They are sometimes hard to avoid though, and the CI
-// workflow treats them as errors, so this allows them throughout the project.
-// Feel free to delete this line.
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 use bevy::asset::AssetMetaCheck;
@@ -15,14 +11,10 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins.set(AssetPlugin {
-        // Wasm builds will check for meta files (that don't exist) if this isn't set.
-        // This causes errors and even panics in web builds on itch.
-        // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
         meta_check: AssetMetaCheck::Never,
         ..default()
     }));
 
-    //Physics:
     app.insert_resource(RapierConfiguration {
         gravity: Vec2::new(0., -900.),
         ..RapierConfiguration::new(1.)
@@ -32,37 +24,21 @@ fn main() {
     #[cfg(debug_assertions)]
     app.add_plugins(RapierDebugRenderPlugin::default());
 
-    // My Systems:
     app.add_systems(Startup, setup);
-    app.add_systems(Update, (move_paddle));
+    app.add_systems(Update, (move_paddle, camera_follow));
 
     app.run();
 }
 
-// Components:
-
-/// These are the movement parameters for our character controller.
-/// For now, this is only used for a single player, but it could power NPCs or
-/// other players as well.
 #[derive(Component)]
 struct MovementController {
-    /// The direction the character wants to move in.
     intent: Vec2,
-
-    /// Maximum speed in world units per second.
-    /// 1 world unit = 1 pixel when using the default 2D camera and no physics
-    /// engine.
     max_speed: f32,
 }
 
-// Systems:
-
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    //Camera:
     commands.spawn(Camera2dBundle::default());
 
-    //Player:
-    //For loop for 10 players
     for i in 0..10 {
         commands.spawn((
             Name::new("Player1"),
@@ -78,7 +54,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             Collider::cuboid(16.0, 16.0),
             ExternalForce::default(),
             ExternalImpulse::default(),
-            Restitution::coefficient(1.0), // P2aff, P7ed8
+            Restitution::coefficient(1.0),
         ));
     }
 
@@ -96,10 +72,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Collider::cuboid(16.0, 16.0),
         ExternalForce::default(),
         ExternalImpulse::default(),
-        Restitution::coefficient(1.0), // P2aff, P7ed8
+        Restitution::coefficient(1.0),
     ));
 
-    //Floor:
     commands.spawn((
         Name::new("Floor"),
         SpriteBundle {
@@ -142,33 +117,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-/*
-fn move_paddle(
-    mut query: Query<&mut Transform>,
-    input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-) {
-    for mut force in &mut query {
-        if input.pressed(KeyCode::KeyA) {
-            force.translation.x -= 100. * time.delta_seconds();
-            //force.force = Vec2::new(-100., 0.);
-        }
-
-        if input.pressed(KeyCode::KeyD) {
-            //force.force = Vec2::new(100., 0.);
-        }
-
-        if input.pressed(KeyCode::KeyW) {
-            //force.force = Vec2::new(0., 100.);
-        }
-
-        if input.pressed(KeyCode::KeyS) {
-            //force.force = Vec2::new(0., -100.);
-        }
-    }
-}
-*/
-
 fn move_paddle(
     mut paddles: Query<(&mut ExternalImpulse, &MovementController)>,
     input: Res<ButtonInput<KeyCode>>,
@@ -176,50 +124,40 @@ fn move_paddle(
 ) {
     for (mut pos, settings) in &mut paddles {
         if input.pressed(KeyCode::KeyW) {
-            //pos.translation.y += 100. * time.delta_seconds();
-            //pos.force = Vec2::new(0., 100000.);
             pos.impulse = Vec2::new(0., 100000.);
         }
 
         if input.pressed(KeyCode::KeyS) {
-            //pos.translation.y -= 100. * time.delta_seconds();
-            //pos.force = Vec2::new(0., -100000.);
             pos.impulse = Vec2::new(0., -100000.);
         }
 
         if input.pressed(KeyCode::KeyA) {
-            //pos.translation.x -= 100. * time.delta_seconds();
-            //pos.force = Vec2::new(-100000., 0.);
             pos.impulse = Vec2::new(-100000., 0.);
         }
 
         if input.pressed(KeyCode::KeyD) {
-            //pos.translation.x += 100. * time.delta_seconds();
-            //pos.force = Vec2::new(100000., 0.);
             pos.impulse = Vec2::new(100000., 0.);
         }
     }
 }
 
-/*
-fn move_paddle(
-    mut players: Query<(&mut Transform, &MovementController)>,
-    input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
+fn camera_follow(
+    mut camera_query: Query<&mut Transform, With<Camera>>,
+    player_query: Query<&Transform, With<MovementController>>,
 ) {
-    for (exterForce, movC) in &mut players {
-        //Zero velocity
-        //veloc.linear = Vec2::ZERO;
+    let mut average_position = Vec3::ZERO;
+    let mut count = 0;
 
-        if input.pressed(KeyCode::KeyA) {
-            exterForce.translation.x -= 100. * time.delta_seconds();
-            //exterForce.force = Vec2::new(-1., 0.);
-        }
+    for transform in player_query.iter() {
+        average_position += transform.translation;
+        count += 1;
+    }
 
-        if input.pressed(KeyCode::KeyD) {
-            exterForce.translation.x += 100. * time.delta_seconds();
-            //exterForce.force = Vec2::new(1., 0.);
-        }
+    if count > 0 {
+        average_position /= count as f32;
+    }
+
+    for mut camera_transform in camera_query.iter_mut() {
+        camera_transform.translation = average_position;
     }
 }
-*/
